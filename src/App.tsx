@@ -7,6 +7,7 @@ var _skipLastFeature = false;
 var _shiftRadius = 50;
 var _scaleData = true;
 var _sortFeatures = true;
+let _colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
 
 interface AppState {
   data: Array<Array<number>>;
@@ -45,25 +46,22 @@ class App extends React.Component<{}, AppState> {
       var data = raw
         .split(/\r\n|\n/)
         .map(function(line: string){
-          var row: Array<number> = line
+          return line
             .split(',')
             .map(function(col: string){
               return Number(col);
-            })
-
-          return row;
-        }).filter(function(line: Array<number>){
-          return line.length > 0;
+            });
         });
 
-      data.pop(); // for some reason, last element is empty.
-      
+      // for some reason, last element is always empty.
+      data.pop();
       var features = self.dataFeatures(data);
       
+      // --------------- Scale data -------------------
       if (_scaleData) {
         data = data.map(function (row: Array<number>){
           return row.map(function (x: number, i: number){
-            if (_skipLastFeature && i >= row.length - 1) {
+            if (_colorLastFeature && i >= row.length - 1) {
               return x;
             }
 
@@ -74,7 +72,7 @@ class App extends React.Component<{}, AppState> {
         features = self.dataFeatures(data);
       }
       
-      // ---------------- variance --------------------
+      // ------------- Sort by variance ----------------
       if (_sortFeatures) {
         data
           .map(function (row: Array<number>) {
@@ -94,8 +92,6 @@ class App extends React.Component<{}, AppState> {
         features.sort(function (a: Feature, b: Feature) {
           return a.variance - b.variance;
         });
-
-        console.log(features);
       }
 
       self.setState({
@@ -129,7 +125,7 @@ class App extends React.Component<{}, AppState> {
   render() {
     let width = 1600;
     let height = 1000;
-    let start: Point = new Point(width / 2, height / 2);
+    let start: Point = new Point(width / 2, height / 3);
 
     let features = this.state.features;
     let points = this.state.data
@@ -151,7 +147,7 @@ class App extends React.Component<{}, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Scale data</span>
                 <span className="input-group-addon">
-                  <input ref="scale-data" type="checkbox" onClick={this.onChange.bind(this)} defaultChecked/>
+                  <input ref="scale-data" type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
                 </span>
               </div>
             </div>
@@ -159,7 +155,7 @@ class App extends React.Component<{}, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Sort by variance</span>
                 <span className="input-group-addon">
-                  <input ref="sort-features" type="checkbox" onClick={this.onChange.bind(this)} defaultChecked/>
+                  <input ref="sort-features" type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
                 </span>
               </div>
             </div>
@@ -292,56 +288,51 @@ interface DataPointProps {
 }
 
 class DataPoint extends React.Component<DataPointProps, {}> {
-  onHover() {
-    console.log(this.props.data);
-  }
-
   render() {
-    var origin = this.props.start.clone();
-    var center = new Point(origin.x, origin.y + 10);
-    var other = new Point(center.x + 10, center.y);
+    let origin = this.props.start.clone();
+    let center = new Point(origin.x, origin.y + 10);
+    let other = new Point(center.x + 10, center.y);
 
     let features = this.props.features;
     let data = this.props.data;
-    var path = new Path(center);
-    let colors = ['#EC7063', '#A569BD', '#5DADE2', '#45B39D', '#32C7B7', '#F5B041', '#AAB7B8'];
+    let path = new Path(center);
     let stroke = function(): string {
       if (_colorLastFeature) {
-        return colors[data[data.length - 1] - 1];
+        return _colors[data[data.length - 1] - 1];
       }
       return 'rgba(228, 149, 70, 0.5)';
     }();
+
+    var startAngle = 0.0;
+    var angleRange = Math.PI;// * 1.5;
+    var angle = 0.0;
 
     features.forEach(function(f: Feature, i: number) {
       if (_skipLastFeature && f.i >= data.length - 1) { return; }
       
       let x = data[f.i];
-      // let pi = Math.PI;
-      let pi = i === 0 ? Math.PI * 2 : Math.PI;
-      
-      var shiftAngle = center.angle(origin, other); 
-      shiftAngle = center.y <= origin.y ? (Math.PI / 2) + shiftAngle : (Math.PI / 2) - shiftAngle;
-      let angle = ((pi / (f.max - f.min)) * x) + shiftAngle;
+      angle = ((angleRange / (f.max - f.min)) * x) + startAngle;
 
       origin.x = center.x;
       origin.y = center.y;
 
       center.x = center.x + _shiftRadius * Math.cos(angle);
       center.y = center.y + _shiftRadius * Math.sin(angle);
-      // center.x = center.x + (_shiftRadius + x * 100) * Math.cos(angle);
-      // center.y = center.y + (_shiftRadius + x * 100) * Math.sin(angle);
-      // center.x = center.x + (_shiftRadius + f.variance * 100) * Math.cos(angle);
-      // center.y = center.y + (_shiftRadius + f.variance * 100) * Math.sin(angle);
 
       other.x = center.x + 10;
       other.y = center.y;
 
       path.add(center);
+
+      if (i === 0) { angleRange = Math.PI * 0.8; }
+      startAngle = center.angle(origin, other);
+      startAngle = center.y <= origin.y ? (Math.PI * 0.6) + startAngle : (Math.PI * 0.6) - startAngle;
     });
 
     let style = {visibility: 'hidden'};
 
-    return (<g>
+    return (
+    <g>
       <circle className="Data-point" cx={center.x} cy={center.y} r={3} stroke={stroke} strokeWidth="1"/>
       <path d={path.toString()} fill="none" strokeWidth="1" stroke={stroke} style={style}/>
     </g>);
