@@ -8,3 +8,6 @@ The project was built using Typescript and Reactjs. To deploy it, go to the proj
 ```
 npm start
 ```
+
+Example of the [abalone](http://archive.ics.uci.edu/ml/datasets/Abalone) dataset.
+![alt text](img/abalone.png)
