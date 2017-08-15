@@ -9,10 +9,10 @@ The project was built using Typescript and Reactjs. To deploy it, go to the proj
 npm start
 ```
 
-Example of the [abalone](http://archive.ics.uci.edu/ml/datasets/Abalone) dataset.
+Example of the [abalone](http://archive.ics.uci.edu/ml/datasets/Abalone) dataset:
 
 ![alt text](img/abalone.png)
 
-And [breast cancer](http://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29)
+And [breast cancer](http://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29):
 
 ![alt text](img/cancer.png)
