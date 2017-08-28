@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Highvis",
+  "name": "Proofs of concept for high-dimensional clustering data visualization",
   "icons": [
     {
       "src": "favicon.ico",
