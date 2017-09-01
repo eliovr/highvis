@@ -1,7 +1,8 @@
-import * as $ from 'jquery';
-
 export type Row<T> = Array<T>;
 export type Data<T> = Array<Row<T>>;
+
+export const colors: Array<string> = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
+export const files: Array<string> = ['iris.csv', 'abalone.csv', 'cancer.csv', 'fertility.csv', 'parkinsons.csv', 'seeds.csv', 'tissue.csv'];
 
 export class Column {
   i: number;
@@ -55,41 +56,53 @@ export class Dataset {
   /** Loads a comma-separated CSV file and instantiates a Dataset object
    * which is given as a parameter to the callback function.
    */
-  static load(url: string, lastIsLabel: boolean, callback: (_: Dataset) => void) {
+  static fetch(url: string, lastIsLabel: boolean, callback: (_: Dataset) => void) {
     let sep = ',';
 
-    $.get(url, function (raw: string) {
-      let rows = raw.split(/\r\n|\n/);
-      let columns: Array<Column> = [];
-      let labels: Array<number> = [];
-      let first = rows[0].split(sep);
-      let n = lastIsLabel ? first.length - 1 : first.length;
+    fetch(url)
+      .then((response: Response): Promise<string> => {
+        return response.text();
+      })
+      .then((raw: string) => {
+        let rows = raw.split(/\r\n|\n/);
+        let columns: Array<Column> = [];
+        let labels: Array<number> = [];
+        let first = rows[0].split(sep);
+        let n = lastIsLabel ? first.length - 1 : first.length;
+  
+        for (let i = 0; i < n; i++) {
+          columns.push(new Column(i));
+        }
+  
+        // For some reason, last row is always empty.
+        rows.pop();
+  
+        let data: Data<number> = rows
+          .map((line: string) => {
+            let row = line.split(sep);
+  
+            if (lastIsLabel) {
+              labels.push(Number(row.pop()));
+            }
+            
+            return row
+              .map((s: string, i: number) => {
+                let x = Number(s);
+                columns[i].add(x);
+                return x;
+              });
+          });
+  
+        callback(new Dataset(data, columns, labels));
+      });
+  }
 
-      for (let i = 0; i < n; i++) {
-        columns.push(new Column(i));
-      }
+  static empty(): Dataset {
+    return new Dataset([], [], []);
+  }
 
-      // For some reason, last row is always empty.
-      rows.pop();
-
-      let data: Data<number> = rows
-        .map(function (line: string) {
-          let row = line.split(sep);
-
-          if (lastIsLabel) {
-            labels.push(Number(row.pop()));
-          }
-          
-          return row
-            .map(function (s: string, i: number) {
-              let x = Number(s);
-              columns[i].add(x);
-              return x;
-            });
-        });
-
-      callback(new Dataset(data, columns, labels));
-    });
+  isEmpty(): boolean {
+    return this.data.length <= 0 || this.columns.length <= 0;
   }
 
   hasLabels(): boolean {
@@ -101,6 +114,8 @@ export class Dataset {
    * @param compareFn Comparison function with which columns are sorted.
    */
   sortFeatures(compareFn: (a: Column, b: Column) => number) {
+    if (this.isEmpty()) { return; }
+
     this.columns.sort(compareFn);
     let columns = this.columns;
 
@@ -114,20 +129,24 @@ export class Dataset {
       this.data[i] = sorted;
     }
 
-    for (let i = 0; i < this.columns.length; i++) {
+    for (let i = 0; i < columns.length; i++) {
       this.columns[i].i = i;
     }
   }
 
   /** Sort data features/columns by variance (least to most). */
   sortFeaturesByVariance() {
+    if (this.isEmpty()) { return; }
+
     this.computeVariances();
-    this.sortFeatures((a: Column, b: Column) => {
+    this.sortFeatures((a: Column, b: Column): number => {
       return a.variance - b.variance;
     });
   }
 
   sortFeaturesByCorrelation() {
+    if (this.isEmpty()) { return; }
+
     let indexes: Array<number> = [];
     let correlations = this.getCorrelations();
 
@@ -140,54 +159,63 @@ export class Dataset {
       let a = corr.a;
       let b = corr.b;
 
-      if (indexes.indexOf(a.i) < 0) {
+      if (indexes.indexOf(a.i) < 0 && indexes.indexOf(b.i) < 0) {
+        if (a.variance < b.variance) {
+          indexes.push(a.i);
+          indexes.push(b.i);
+        } else {
+          indexes.push(b.i);
+          indexes.push(a.i);
+        }
+      } else if (indexes.indexOf(a.i) < 0) {
         indexes.push(a.i);
-      }
-      if (indexes.indexOf(b.i) < 0) {
+      } else if (indexes.indexOf(b.i) < 0) {
         indexes.push(b.i);
       }
     }
 
-    for (let i = 0; i < this.data.length; i++) {
-      let row = this.data[i];
-      let sorted: Array<number> = [];
-      for (let j = 0; j < indexes.length; j++) {
-        let col = indexes[j];
-        sorted[j] = row[col];
-      }
-      this.data[i] = sorted;
-    }
-
+    let columns: Array<Column> = [];
     for (let i = 0; i < this.columns.length; i++) {
-      this.columns[i].i = indexes[i];
+      columns[i] = this.columns[indexes[i]];
     }
+    this.columns = columns;
+
+    this.sortFeatures((a: Column, b: Column): number => {
+      return 0;
+    });
   }
 
   /** Scales all attributes except labels. */
-  scale() {
-    let columns = this.columns;
-    let scaledColumns: Array<Column> = columns
-      .map((c: Column) => {
-        return new Column(c.i);
-      });
+  scale(): Dataset {
+    if (!this.isEmpty()) { 
+      let columns = this.columns;
+      let scaledColumns: Array<Column> = columns
+        .map((c: Column) => {
+          return new Column(c.i);
+        });
 
-    for (let i = 0; i < this.data.length; i++) {
-      let row = this.data[i];
+      for (let i = 0; i < this.data.length; i++) {
+        let row = this.data[i];
 
-      for (let j = 0; j < row.length; j++) {
-        let sx = columns[j].scale(row[j]);
-        scaledColumns[j].add(sx);
-        row[j] = sx;
+        for (let j = 0; j < row.length; j++) {
+          let sx = columns[j].scale(row[j]);
+          scaledColumns[j].add(sx);
+          row[j] = sx;
+        }
       }
+      
+      this.columns = scaledColumns;
     }
     
-    this.columns = scaledColumns;
+    return this;
   }
 
   /**
    * Computes the variance for each feature / column. 
    */
   computeVariances() {
+    if (this.isEmpty()) { return; }
+
     let columns = this.columns;
     let allNaN = this.columns.every((c: Column) => {
       return isNaN(c.variance);
@@ -212,6 +240,8 @@ export class Dataset {
   }
 
   getCovariances(): Array<Relation> {
+    if (this.isEmpty()) { return []; }
+
     if (this.covariances.length <= 0) {
       let n = this.data.length;
       let columns = this.columns;
@@ -254,6 +284,8 @@ export class Dataset {
    * to the given point 'p'. 
    */
   appendDistance(p: Row<number>) {
+    if (this.isEmpty()) { return; }
+
     let column = new Column(this.columns.length);
     this.columns.push(column);
 
@@ -266,6 +298,8 @@ export class Dataset {
   }
 
   getCorrelations(): Array<Relation> {
+    if (this.isEmpty()) { return []; }
+
     if (this.correlations.length <= 0) {
       this.computeVariances();
       this.getCovariances();
@@ -355,10 +389,10 @@ export class Point {
   }
 }
 
-// function factorial(n: number): number {
-//     let f=1;
-//     for (let i = 2; i <= n; i++) {
-//       f = f * i;
-//     }
-//     return f;
+// function printOrder(arr: Array<Column>) {
+//   let s = '';
+//   arr.forEach((c: Column) => {
+//     s += c.i + ', ';
+//   });
+//   console.log(s);
 // }

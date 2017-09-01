@@ -1,15 +1,6 @@
 import * as React from 'react';
-// import * as $ from 'jquery';
-import { Dataset, Column, Data } from './utils';
+import { Dataset, Column, colors as _colors, files as _files } from './utils';
 import './App.css';
-
-let _colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
-let _files = ['iris.csv', 'abalone.csv', 'cancer.csv', 'fertility.csv', 'parkinsons.csv', 'seeds.csv', 'tissue.csv'];
-let _width = 1200;
-let _height = 590;
-let _radius = 3;
-let _start = performance.now();
-let _dataset: Dataset;
 
 interface Form {
   file: string;
@@ -18,23 +9,24 @@ interface Form {
   colorFeatures: boolean;
 }
 
+interface AppProps {
+  width?: number;
+  height?: number;
+}
+
 interface AppState {
-  data: Data<number>;
-  columns: Array<Column>;
+  ds: Dataset;
   colorFeatures: boolean;
 }
 
-class DeviseApp extends React.Component<{}, AppState> {
+class DeviseApp extends React.Component<AppProps, AppState> {
   constructor() {
     super();
 
     this.state = {
-      data: [],
-      columns: [],
+      ds: Dataset.empty(),
       colorFeatures: true
     };
-
-    this.fetchData('iris.csv', true, true);
   }
 
   getForm(): Form {
@@ -52,39 +44,24 @@ class DeviseApp extends React.Component<{}, AppState> {
   }
 
   componentDidMount() {
-    let t = performance.now() - _start;
-    console.log('performance: ' + t);
-  }
-
-  componentDidUpdate() {
-    let t = performance.now() - _start;
-    console.log('performance: ' + t);
+    this.fetchData(_files[0], true, true);
   }
 
   fetchData(fileName: string, hasLabel: boolean, scale: boolean) {
     let self = this;
-    Dataset.load('data/' + fileName, hasLabel, (ds: Dataset) => {
-      _dataset = ds;
-      if (scale) { _dataset.scale(); }
-
-      let zero = _dataset.columns.map((_) => { return 0; });
-      _dataset.appendDistance(zero);
+    Dataset.fetch('data/' + fileName, hasLabel, (ds: Dataset) => {
+      if (scale) { ds.scale(); }
+      let zero = ds.columns.map((_) => { return 0; });
+      ds.appendDistance(zero);
       
-      self.setState({
-        data: _dataset.data,
-        columns: _dataset.columns
-      });
+      self.setState({ ds: ds });
     });
   }
 
   onChange() {
-    _start = performance.now();
     let form = this.getForm();
     this.fetchData(form.file, form.hasLabel, form.scale);
-    this.setState({ 
-      data: [],
-      columns: []
-    });
+    this.setState({ ds: Dataset.empty() });
   }
 
   onColorFeaturesChange(e: React.MouseEvent<HTMLInputElement>) {
@@ -93,29 +70,39 @@ class DeviseApp extends React.Component<{}, AppState> {
   }
 
   render() {
-    let data = this.state.data;
-    var columns = this.state.columns;
+    let height = this.props.height ? this.props.height : 700;
+    let width = this.props.width ? this.props.width : 1200;
+    let ds = this.state.ds;
     let colorFeatures = this.state.colorFeatures;
 
     let datasets = _files.map((file: string, i: number) => {
       return <option key={i}>{file}</option>;
     });
+
+    let yRange = height * 0.95;
+    let xRange = width * 0.95;
     
-    let points = data
+    let points = ds.data
       .map(function(row: Array<number>, i: number) {
-        return (<DataPoint key={i} data={row} columns={columns} colorFeatures={colorFeatures} />); 
+        return (
+          <DataPoint 
+            key={i} 
+            data={row} 
+            columns={ds.columns} 
+            colorFeatures={colorFeatures}
+            width={xRange}
+            height={yRange} />
+        ); 
       });
 
-    let canvas = <div>Loading...</div>;
-    if (points.length > 0) {
-      canvas = <svg width={_width} height={_height}>{points}</svg>;
-    }
-
     return (
-      <div className="App container">
+      <div>
           <div className="App-header row">
             <div className="col">
-              <select id="file-name" onChange={this.onChange.bind(this)}>{datasets}</select>
+              <div className="input-group">
+                <span className="input-group-addon">Data</span>
+                <select id="file-name" onChange={this.onChange.bind(this)}>{datasets}</select>
+              </div>
             </div>
             <div className="col">
               <div className="input-group">
@@ -142,7 +129,13 @@ class DeviseApp extends React.Component<{}, AppState> {
               </div>
             </div>
           </div>
-        <div className="row"> {canvas} </div>
+        <div>
+        {
+          points.length <= 0 ?
+            <div>Loading...</div> :
+            <svg width={width} height={height}>{points}</svg>
+        }
+        </div>
       </div>
     );
   }
@@ -154,19 +147,22 @@ interface DataPointProps {
   data: Array<number>;
   columns: Array<Column>;
   colorFeatures: boolean;
+  width: number;
+  height: number;
 }
 
 class DataPoint extends React.Component<DataPointProps, {}> {
   render() {
+    let radius = 3;
     let data = this.props.data;
     let columns = this.props.columns;
     let colorFeatures = this.props.colorFeatures;
-    let yRange = _height * 0.95;
-    let xRange = _width * 0.95;
+    let width = this.props.width;
+    let height = this.props.height;
     
     let distance = data[data.length - 1];
     let dc = columns[columns.length - 1];
-    let y = ((distance * yRange) / dc.max) + (_radius * 2);
+    let y = ((distance * height) / dc.max) + (radius * 2);
     
     let points: Array<JSX.Element> = [];
 
@@ -177,12 +173,12 @@ class DataPoint extends React.Component<DataPointProps, {}> {
       let color = 'black';
 
       if (!isNaN(n)) {
-        x = ((xRange / (col.max - col.min)) * n) + (_radius * 2);
+        x = ((width / (col.max - col.min)) * n) + (radius * 2);
         color = colorFeatures ? _colors[j] : _colors[0];
         if (j >= _colors.length) { j = 0; }
       }
 
-      points[i] = <circle key={i} className="Data-point" r={_radius} cx={x} cy={y} stroke={color} strokeWidth="1"/>;
+      points[i] = <circle key={i} className="Data-point" r={radius} cx={x} cy={y} stroke={color} strokeWidth="1"/>;
     }
 
     return <g>{points}</g>;

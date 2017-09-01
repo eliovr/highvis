@@ -1,13 +1,6 @@
 import * as React from 'react';
-import { Dataset, Column, Data, Point, Path } from './utils';
+import { Dataset, Column, Point, Path, colors as _colors, files as _files } from './utils';
 import './App.css';
-
-let _width = 1200;
-let _height = 600;
-let _colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf', '#999999'];
-let _files = ['iris.csv', 'abalone.csv', 'cancer.csv', 'fertility.csv', 'parkinsons.csv', 'seeds.csv', 'tissue.csv'];
-let _sorting = ['Variance', 'Correlation'];
-let _dataset: Dataset;
 
 interface Form {
   file: string;
@@ -17,48 +10,46 @@ interface Form {
   showPath: boolean;
 }
 
+interface AppProps {
+  width?: number;
+  height?: number;
+}
+
 interface AppState {
-  data: Data<number>;
-  columns: Array<Column>;
+  ds: Dataset;
+  sort: string;
   step: number;
   hasLabel: boolean;
   colorLabel: boolean;
 }
 
-class SpiralApp extends React.Component<{}, AppState> {
+class SpiralApp extends React.Component<AppProps, AppState> {
+  sorting: Array<string>;
+
   constructor() {
     super();
 
+    this.sorting = ['Variance', 'Correlation'];
+
     this.state = {
-      data: [],
-      columns: [],
+      ds: Dataset.empty(),
+      sort: this.sorting[0],
       step: 50,
       hasLabel: true,
       colorLabel: true
     };
+  }
 
-    this.fetchData(_files[0], true, true, _sorting[0]);
+  componentDidMount() {
+    this.fetchData(_files[0], true, true, this.sorting[0]);
   }
   
   fetchData(fileName: string, hasLabel: boolean, scale: boolean, sort: string) {
     let self = this;
     
-    Dataset.load('data/' + fileName, hasLabel, (ds: Dataset) => {
-      _dataset = ds;
-      if (scale) { _dataset.scale(); }
-
-      if (sort === 'Correlation') {
-        _dataset.sortFeaturesByCorrelation();
-      } else {
-        _dataset.sortFeaturesByVariance();
-      }
-      // if (sort) { _dataset.sortFeaturesByVariance(); }
-      // if (sort) { _dataset.sortFeaturesByCorrelation(); }
-
-      self.setState({
-        data: _dataset.data,
-        columns: _dataset.columns
-      });
+    Dataset.fetch('data/' + fileName, hasLabel, (ds: Dataset) => {
+      if (scale) { ds.scale(); }
+      self.setState({ ds: ds });
     });
   }
 
@@ -91,18 +82,14 @@ class SpiralApp extends React.Component<{}, AppState> {
   reloadData() {
     let form = this.getForm();
     this.fetchData(form.file, form.hasLabel, form.scale, form.sort);
-    this.setState({ data: [], columns: [] });
+    this.setState({ ds: Dataset.empty() });
   }
 
-  onScaleChanged(e: React.MouseEvent<HTMLInputElement>) {
+  onScaleChanged(e: React.MouseEvent<HTMLInputElement>) { 
     let scale = (e.target as HTMLInputElement).checked;
 
     if (scale) {
-      _dataset.scale();
-      this.setState({ 
-        data: _dataset.data,
-        columns: _dataset.columns
-      });
+      this.setState({ ds: this.state.ds.scale() });
     } else {
       this.reloadData();
     }
@@ -110,64 +97,57 @@ class SpiralApp extends React.Component<{}, AppState> {
 
   onSortChanged(e: React.MouseEvent<HTMLInputElement>) {
     let sort = (e.target as HTMLInputElement).value;
-
-    if (sort === 'Correlation') {
-      _dataset.sortFeaturesByCorrelation();
-    } else { 
-      _dataset.sortFeaturesByVariance();
-    }
-
-    this.setState({ 
-      data: _dataset.data, 
-      columns: _dataset.columns 
-    });
+    this.setState({ sort: sort });
   }
 
   onStepChanged(e: React.ChangeEvent<HTMLInputElement>) {
-    let elem = e.target as HTMLInputElement;
-    this.setState({ step: Number(elem.value) });
+    let step = (e.target as HTMLInputElement).value;
+    this.setState({ step: Number(step) });
   }
 
   onColorChanged(e: React.MouseEvent<HTMLInputElement>) {
-    let elem = e.target as HTMLInputElement;
-    this.setState({ colorLabel: elem.checked });
+    let color = (e.target as HTMLInputElement).checked;
+    this.setState({ colorLabel: color });
   }
 
   render() {
-    let start: Point = new Point(_width / 2, _height / 2);
-    let data = this.state.data;
-    let columns = this.state.columns;
+    let height = this.props.height ? this.props.height : 700;
+    let width = this.props.width ? this.props.width : 1200;
+    let ds = this.state.ds;
+    let sort = this.state.sort;
     let step = this.state.step;
     let hasLabels = this.state.hasLabel;
     let colorLabel = this.state.colorLabel;
+    let start: Point = new Point(width / 2, height / 2);
     
     let datasets = _files.map((file: string, i: number) => {
       return <option key={i}>{file}</option>;
     });
 
-    let sortings = _sorting.map((s: string, i: number) => {
+    let sortings = this.sorting.map((s: string, i: number) => {
       return <option key={i}>{s}</option>;
     });
 
-    let points = data
+    sort === 'Variance' ? 
+      ds.sortFeaturesByVariance() :
+      ds.sortFeaturesByCorrelation();
+
+    let points = ds.data
       .map(function(row: Array<number>, i: number) {
-        let label = hasLabels ? _dataset.labels[i] : -1;
-        return (<DataPoint key={i} 
-          start={start} 
-          data={row} 
-          columns={columns} 
-          label={label} 
-          colorLabel={colorLabel} 
-          step={step} />); 
+        let label = hasLabels ? ds.labels[i] : -1;
+        return (
+          <DataPoint key={i} 
+            start={start} 
+            data={row} 
+            columns={ds.columns} 
+            label={label} 
+            colorLabel={colorLabel} 
+            step={step} />
+        ); 
       });
 
-    var canvas = <div>Loading...</div>;
-    if (points.length > 0) {
-      canvas = <svg width={_width} height={_height}>{points}</svg>;
-    }
-
     return (
-      <div className="App">
+      <div>
         <div className="App-header">
           <div className="row">
             <div className="col">
@@ -188,7 +168,6 @@ class SpiralApp extends React.Component<{}, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Sort by</span>
                 <select id="sort-data" onChange={this.onSortChanged.bind(this)}>{sortings}</select>
-                  {/* <input id="sort-data" type="checkbox" onClick={this.onSortChanged.bind(this)} defaultChecked={true}/> */}
               </div>
             </div>
             <div className="col">
@@ -223,7 +202,11 @@ class SpiralApp extends React.Component<{}, AppState> {
             </div>
           </div>
         </div>
-        {canvas}
+        {
+          points.length <= 0 ?
+            <div>Loading...</div> :
+            <svg width={width} height={height}>{points}</svg>
+        }
       </div>
     );
   }
