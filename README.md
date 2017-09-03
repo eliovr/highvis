@@ -1,11 +1,15 @@
-This is a proof of concept for high dimensional data visualization.
-Each data point starts at the center of the screen and shifts outwards in angles 
-that are based on the values of each feature. The data point moves as many times
-as features there are.
+This project contains different proofs of concept for high dimensional data visualization.
+Visit [here](https://eliovr.github.io/highvis/) to try it.
 
-The project was built using Typescript and Reactjs. To deploy it you need [npm](https://www.npmjs.com/). 
+## Details
+The project was build using: 
+- [Typescript](https://www.typescriptlang.org/).
+- [Reactjs](https://facebook.github.io/react/).
+- [Create React App](https://github.com/facebookincubator/create-react-app).
+- [Bootstrap](https://getbootstrap.com/).
+- [Visual Studio Code](https://code.visualstudio.com/).
 
-Go to the project root folder and run:
+To deploy it on your own machine, go to the project folder and run:
 
 ```
 npm install
