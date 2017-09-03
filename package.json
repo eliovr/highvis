@@ -2,6 +2,7 @@
   "name": "highvis",
   "version": "0.1.0",
   "private": true,
+  "homepage": "http://eliovr.github.io/highvis",
   "dependencies": {
     "@types/history": "^4.6.0",
     "@types/jest": "^20.0.6",
@@ -16,12 +17,15 @@
     "react-scripts-ts": "2.5.0"
   },
   "devDependencies": {
-    "@types/jquery": "^3.2.11"
+    "@types/jquery": "^3.2.11",
+    "gh-pages": "^1.0.0"
   },
   "scripts": {
     "start": "react-scripts-ts start",
     "build": "react-scripts-ts build",
     "test": "react-scripts-ts test --env=jsdom",
-    "eject": "react-scripts-ts eject"
+    "eject": "react-scripts-ts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   }
 }

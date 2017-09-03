@@ -11,11 +11,11 @@ class App extends React.Component {
 
     return (
       <Router history={history}>
-      <div className="App Container">
+      <div className="Container">
         <Route path="/" exact={true} render={() => (
-          <ul>
-            <li><a href="/spiral">Spiral</a></li>
-            <li><a href="/devise">Devise</a></li>
+          <ul className="list-group">
+            <li className="list-group-item"><a href="/spiral">Spiral</a></li>
+            <li className="list-group-item"><a href="/devise">Devise</a></li>
           </ul>
         )}/>
         <Route path="/spiral" render={({match}) => (<SpiralApp width={width} height={height} />)} />

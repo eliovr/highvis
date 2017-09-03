@@ -2,13 +2,6 @@ import * as React from 'react';
 import { Dataset, Column, colors as _colors, files as _files } from './utils';
 import './App.css';
 
-interface Form {
-  file: string;
-  scale: boolean;
-  hasLabel: boolean;
-  colorFeatures: boolean;
-}
-
 interface AppProps {
   width?: number;
   height?: number;
@@ -20,26 +13,17 @@ interface AppState {
 }
 
 class DeviseApp extends React.Component<AppProps, AppState> {
+  selectData: HTMLSelectElement | null;
+  inputScale: HTMLInputElement | null;
+  inputHasLabel: HTMLInputElement | null;
+  inputColorFeatures: HTMLInputElement | null;
+
   constructor() {
     super();
 
     this.state = {
       ds: Dataset.empty(),
       colorFeatures: true
-    };
-  }
-
-  getForm(): Form {
-    let file = document.getElementById('file-name') as HTMLInputElement;
-    let hasLabel = document.getElementById('has-label') as HTMLInputElement;
-    let scale = document.getElementById('scale-data') as HTMLInputElement;
-    let color = document.getElementById('color-features') as HTMLInputElement;
-
-    return {
-      file: file.value,
-      hasLabel: hasLabel.checked,
-      scale: scale.checked,
-      colorFeatures: color.checked
     };
   }
 
@@ -59,9 +43,18 @@ class DeviseApp extends React.Component<AppProps, AppState> {
   }
 
   onChange() {
-    let form = this.getForm();
-    this.fetchData(form.file, form.hasLabel, form.scale);
-    this.setState({ ds: Dataset.empty() });
+    if (this.selectData && 
+      this.inputHasLabel && 
+      this.inputScale && 
+      this.inputColorFeatures) {
+
+        this.fetchData(
+          this.selectData.value, 
+          this.inputHasLabel.checked, 
+          this.inputScale.checked);
+
+        this.setState({ ds: Dataset.empty() });
+      }
   }
 
   onColorFeaturesChange(e: React.MouseEvent<HTMLInputElement>) {
@@ -101,14 +94,14 @@ class DeviseApp extends React.Component<AppProps, AppState> {
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Data</span>
-                <select id="file-name" onChange={this.onChange.bind(this)}>{datasets}</select>
+                <select ref={s => this.selectData = s} onChange={this.onChange.bind(this)}>{datasets}</select>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Has label</span>
                 <span className="input-group-addon">
-                  <input id="has-label" type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
+                  <input ref={i => this.inputHasLabel = i} type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
                 </span>
               </div>
             </div>
@@ -116,7 +109,7 @@ class DeviseApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Scale data</span>
                 <span className="input-group-addon">
-                  <input id="scale-data" type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
+                  <input ref={i => this.inputScale = i} type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
                 </span>
               </div>
             </div>
@@ -124,7 +117,7 @@ class DeviseApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Color features</span>
                 <span className="input-group-addon">
-                  <input id="color-features" type="checkbox" onClick={this.onColorFeaturesChange.bind(this)} defaultChecked={colorFeatures}/>
+                  <input ref={i => this.inputColorFeatures = i} type="checkbox" onClick={this.onColorFeaturesChange.bind(this)} defaultChecked={colorFeatures}/>
                 </span>
               </div>
             </div>

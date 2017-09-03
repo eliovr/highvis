@@ -2,14 +2,6 @@ import * as React from 'react';
 import { Dataset, Column, Point, Path, colors as _colors, files as _files } from './utils';
 import './App.css';
 
-interface Form {
-  file: string;
-  scale: boolean;
-  sort: string;
-  hasLabel: boolean;
-  showPath: boolean;
-}
-
 interface AppProps {
   width?: number;
   height?: number;
@@ -25,6 +17,13 @@ interface AppState {
 
 class SpiralApp extends React.Component<AppProps, AppState> {
   sorting: Array<string>;
+  selectData: HTMLSelectElement | null;
+  selectSort: HTMLSelectElement | null;
+  inputStep: HTMLInputElement | null;
+  inputScale: HTMLInputElement | null;
+  inputShowPath: HTMLInputElement | null;
+  inputHasLabel: HTMLInputElement | null;
+  inputColorLabel: HTMLInputElement | null;
 
   constructor() {
     super();
@@ -53,22 +52,6 @@ class SpiralApp extends React.Component<AppProps, AppState> {
     });
   }
 
-  getForm(): Form {
-    let file = document.getElementById('file-name') as HTMLInputElement;
-    let hasLabel = document.getElementById('has-label') as HTMLInputElement;
-    let scale = document.getElementById('scale-data') as HTMLInputElement;
-    let sort = document.getElementById('sort-data') as HTMLInputElement;
-    let showPath = document.getElementById('show-path') as HTMLInputElement;
-
-    return {
-      file: file.value,
-      hasLabel: hasLabel.checked,
-      scale: scale.checked,
-      sort: sort.value,
-      showPath: showPath.checked
-    };
-  }
-
   onPathChanged(e: React.MouseEvent<HTMLInputElement>) {
     let elem = e.target as HTMLInputElement;
     let paths = document.getElementsByTagName('path');
@@ -80,9 +63,19 @@ class SpiralApp extends React.Component<AppProps, AppState> {
   }
 
   reloadData() {
-    let form = this.getForm();
-    this.fetchData(form.file, form.hasLabel, form.scale, form.sort);
-    this.setState({ ds: Dataset.empty() });
+    if (this.selectData && 
+      this.inputHasLabel && 
+      this.inputScale && 
+      this.selectSort) {
+
+        this.fetchData(
+          this.selectData.value, 
+          this.inputHasLabel.checked, 
+          this.inputScale.checked, 
+          this.selectSort.value);
+
+        this.setState({ ds: Dataset.empty() });
+      }
   }
 
   onScaleChanged(e: React.MouseEvent<HTMLInputElement>) { 
@@ -134,15 +127,17 @@ class SpiralApp extends React.Component<AppProps, AppState> {
 
     let points = ds.data
       .map(function(row: Array<number>, i: number) {
-        let label = hasLabels ? ds.labels[i] : -1;
+        let props = {
+          start: start,
+          data: row,
+          columns: ds.columns,
+          label: hasLabels ? ds.labels[i] : -1,
+          colorLabel: colorLabel,
+          step: step
+        };
+
         return (
-          <DataPoint key={i} 
-            start={start} 
-            data={row} 
-            columns={ds.columns} 
-            label={label} 
-            colorLabel={colorLabel} 
-            step={step} />
+          <DataPoint key={i} {...props} />
         ); 
       });
 
@@ -153,34 +148,34 @@ class SpiralApp extends React.Component<AppProps, AppState> {
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Data</span>
-                <select id="file-name" onChange={this.reloadData.bind(this)}>{datasets}</select>
-              </div>
-            </div>
-            <div className="col">
-              <div className="input-group">
-                <span className="input-group-addon">Scale data</span>
-                <span className="input-group-addon">
-                  <input id="scale-data" type="checkbox" onClick={this.onScaleChanged.bind(this)} defaultChecked={true}/>
-                </span>
+                <select ref={s => this.selectData = s} onChange={this.reloadData.bind(this)}>{datasets}</select>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Sort by</span>
-                <select id="sort-data" onChange={this.onSortChanged.bind(this)}>{sortings}</select>
+                <select ref={s => this.selectSort = s} onChange={this.onSortChanged.bind(this)}>{sortings}</select>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Step</span>
-                <input id="step" type="number" className="form-control" defaultValue={step + ''} onBlur={this.onStepChanged.bind(this)}/>
+                <input ref={i => this.inputStep = i} type="number" className="form-control" defaultValue={step + ''} onBlur={this.onStepChanged.bind(this)} title="The bigger the step the larger the radius."/>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
-                <span className="input-group-addon">Show path</span>
+                <span className="input-group-addon">Scale</span>
                 <span className="input-group-addon">
-                  <input id="show-path" type="checkbox" onClick={this.onPathChanged}/>
+                  <input ref={i => this.inputScale = i} type="checkbox" onClick={this.onScaleChanged.bind(this)} defaultChecked={true} title="Scale data to a value between 0 and 1."/>
+                </span>
+              </div>
+            </div>
+            <div className="col">
+              <div className="input-group">
+                <span className="input-group-addon">Path</span>
+                <span className="input-group-addon">
+                  <input ref={i => this.inputShowPath = i} type="checkbox" onClick={this.onPathChanged} title="Show path taken by every data point." />
                 </span>
               </div>
             </div>
@@ -188,7 +183,7 @@ class SpiralApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Has label</span>
                 <span className="input-group-addon">
-                  <input id="has-label" type="checkbox" onClick={this.reloadData.bind(this)} defaultChecked={true}/>
+                  <input ref={i => this.inputHasLabel = i} type="checkbox" onClick={this.reloadData.bind(this)} defaultChecked={true} title="Whether the last attribute of the dataset are labels."/>
                 </span>
               </div>
             </div>
@@ -196,7 +191,7 @@ class SpiralApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Color label</span>
                 <span className="input-group-addon">
-                  <input id="color-label" type="checkbox" onClick={this.onColorChanged.bind(this)} defaultChecked={true}/>
+                  <input ref={i => this.inputColorLabel = i} type="checkbox" onClick={this.onColorChanged.bind(this)} defaultChecked={true} title="Color data points by their label." />
                 </span>
               </div>
             </div>
