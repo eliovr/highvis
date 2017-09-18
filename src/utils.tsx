@@ -279,11 +279,17 @@ export class Dataset {
     return this.covariances;
   }
 
-  /** 
-   * Appends a new column with Eucledian distance of each row 
-   * to the given point 'p'. 
+  /**
+   * Creates and appends a new column with the distance value 
+   * between each row (instance) to the given vector.
+   * Distance is calculated using Minkowski distance. 
+   * - Eucledian: p = 2.0
+   * - Manhattan: p = 1.0
+   * @param p Minkowski metric (>= 0).
+   * @param vector Reference vector (or multidimensional point) 
+   * from which to calculate distances.
    */
-  appendDistance(p: Row<number>) {
+  addDistanceTo(p: number, vector: Row<number>) {
     if (this.isEmpty()) { return; }
 
     let column = new Column(this.columns.length);
@@ -291,7 +297,7 @@ export class Dataset {
 
     for (var i = 0; i < this.data.length; i++) {
       let row = this.data[i];
-      let distance = this.eucledian(row, p);
+      let distance = this.minkowski(p, row, vector);
       row.push(distance);
       column.add(distance);
     }
@@ -329,20 +335,21 @@ export class Dataset {
     this.covariances = [];
   }
 
-  private eucledian(a: Row<number>, b: Row<number>): number {
+  private minkowski(p: number, a: Row<number>, b: Row<number>): number {
     if (a.length !== b.length) {
       console.error('Rows must have same length to calculate distance.');
       return -1;
     }
 
-    let distance = 0.0;
+    let sum = 0.0;
     for (var i = 0; i < a.length; i++) {
-      distance += Math.pow(a[i] - b[i], 2);
+      sum += Math.pow(a[i] - b[i], p);
     }
 
-    return Math.sqrt(distance);
+    return Math.pow(sum, 1 / p);
   }
 }
+
 
 export class Path {
   d: Array<string>;

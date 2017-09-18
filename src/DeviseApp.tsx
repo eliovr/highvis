@@ -17,6 +17,7 @@ class DeviseApp extends React.Component<AppProps, AppState> {
   inputScale: HTMLInputElement | null;
   inputHasLabel: HTMLInputElement | null;
   inputColorFeatures: HTMLInputElement | null;
+  inputP: HTMLInputElement | null;
 
   constructor() {
     super();
@@ -28,30 +29,33 @@ class DeviseApp extends React.Component<AppProps, AppState> {
   }
 
   componentDidMount() {
-    this.fetchData(_files[0], true, true);
+    this.fetchData(_files[0], true, true, 2.0);
   }
 
-  fetchData(fileName: string, hasLabel: boolean, scale: boolean) {
+  fetchData(fileName: string, hasLabel: boolean, scale: boolean, p: number) {
     let self = this;
     Dataset.fetch('data/' + fileName, hasLabel, (ds: Dataset) => {
       if (scale) { ds.scale(); }
       let zero = ds.columns.map((_) => { return 0; });
-      ds.appendDistance(zero);
+      ds.addDistanceTo(p, zero);
       
       self.setState({ ds: ds });
     });
   }
 
   onChange() {
-    if (this.selectData && 
+    if (
+      this.selectData && 
       this.inputHasLabel && 
       this.inputScale && 
-      this.inputColorFeatures) {
-
+      this.inputColorFeatures &&
+      this.inputP
+    ) {
         this.fetchData(
           this.selectData.value, 
           this.inputHasLabel.checked, 
-          this.inputScale.checked);
+          this.inputScale.checked,
+          +this.inputP.value);
 
         this.setState({ ds: Dataset.empty() });
       }
@@ -94,14 +98,20 @@ class DeviseApp extends React.Component<AppProps, AppState> {
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Data</span>
-                <select ref={s => this.selectData = s} onChange={this.onChange.bind(this)}>{datasets}</select>
+                <select ref={s => this.selectData = s} onChange={_ => this.onChange()}>{datasets}</select>
+              </div>
+            </div>
+            <div className="col">
+              <div className="input-group">
+                <span className="input-group-addon">p</span>
+                <input ref={e => this.inputP = e} type="number" onChange={_ => this.onChange()} min="0.0" step="0.1" defaultValue="2.0"/>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Has label</span>
                 <span className="input-group-addon">
-                  <input ref={i => this.inputHasLabel = i} type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
+                  <input ref={i => this.inputHasLabel = i} type="checkbox" onClick={_ => this.onChange()} defaultChecked={true}/>
                 </span>
               </div>
             </div>
@@ -109,7 +119,7 @@ class DeviseApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Scale data</span>
                 <span className="input-group-addon">
-                  <input ref={i => this.inputScale = i} type="checkbox" onClick={this.onChange.bind(this)} defaultChecked={true}/>
+                  <input ref={i => this.inputScale = i} type="checkbox" onClick={_ => this.onChange()} defaultChecked={true}/>
                 </span>
               </div>
             </div>
@@ -117,7 +127,7 @@ class DeviseApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Color features</span>
                 <span className="input-group-addon">
-                  <input ref={i => this.inputColorFeatures = i} type="checkbox" onClick={this.onColorFeaturesChange.bind(this)} defaultChecked={colorFeatures}/>
+                  <input ref={i => this.inputColorFeatures = i} type="checkbox" onClick={e => this.onColorFeaturesChange(e)} defaultChecked={colorFeatures}/>
                 </span>
               </div>
             </div>

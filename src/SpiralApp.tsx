@@ -88,12 +88,12 @@ class SpiralApp extends React.Component<AppProps, AppState> {
     }
   }
 
-  onSortChanged(e: React.MouseEvent<HTMLInputElement>) {
-    let sort = (e.target as HTMLInputElement).value;
+  onSortChanged(e: React.ChangeEvent<HTMLSelectElement>) {
+    let sort = (e.target as HTMLSelectElement).value;
     this.setState({ sort: sort });
   }
 
-  onStepChanged(e: React.ChangeEvent<HTMLInputElement>) {
+  onStepChanged(e: React.FocusEvent<HTMLInputElement>) {
     let step = (e.target as HTMLInputElement).value;
     this.setState({ step: Number(step) });
   }
@@ -148,26 +148,26 @@ class SpiralApp extends React.Component<AppProps, AppState> {
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Data</span>
-                <select ref={s => this.selectData = s} onChange={this.reloadData.bind(this)}>{datasets}</select>
+                <select ref={s => this.selectData = s} onChange={_ => this.reloadData()}>{datasets}</select>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Sort by</span>
-                <select ref={s => this.selectSort = s} onChange={this.onSortChanged.bind(this)}>{sortings}</select>
+                <select ref={s => this.selectSort = s} onChange={e => this.onSortChanged(e)}>{sortings}</select>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Step</span>
-                <input ref={i => this.inputStep = i} type="number" className="form-control" defaultValue={step + ''} onBlur={this.onStepChanged.bind(this)} title="The bigger the step the larger the radius."/>
+                <input ref={i => this.inputStep = i} type="number" className="form-control" defaultValue={step + ''} onBlur={e => this.onStepChanged(e)} title="The bigger the step the larger the radius."/>
               </div>
             </div>
             <div className="col">
               <div className="input-group">
                 <span className="input-group-addon">Scale</span>
                 <span className="input-group-addon">
-                  <input ref={i => this.inputScale = i} type="checkbox" onClick={this.onScaleChanged.bind(this)} defaultChecked={true} title="Scale data to a value between 0 and 1."/>
+                  <input ref={i => this.inputScale = i} type="checkbox" onClick={e => this.onScaleChanged(e)} defaultChecked={true} title="Scale data to a value between 0 and 1."/>
                 </span>
               </div>
             </div>
@@ -183,7 +183,7 @@ class SpiralApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Has label</span>
                 <span className="input-group-addon">
-                  <input ref={i => this.inputHasLabel = i} type="checkbox" onClick={this.reloadData.bind(this)} defaultChecked={true} title="Whether the last attribute of the dataset are labels."/>
+                  <input ref={i => this.inputHasLabel = i} type="checkbox" onClick={_ => this.reloadData()} defaultChecked={true} title="Whether the last attribute of the dataset are labels."/>
                 </span>
               </div>
             </div>
@@ -191,7 +191,7 @@ class SpiralApp extends React.Component<AppProps, AppState> {
               <div className="input-group">
                 <span className="input-group-addon">Color label</span>
                 <span className="input-group-addon">
-                  <input ref={i => this.inputColorLabel = i} type="checkbox" onClick={this.onColorChanged.bind(this)} defaultChecked={true} title="Color data points by their label." />
+                  <input ref={i => this.inputColorLabel = i} type="checkbox" onClick={e => this.onColorChanged(e)} defaultChecked={true} title="Color data points by their label." />
                 </span>
               </div>
             </div>
