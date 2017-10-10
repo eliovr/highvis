@@ -354,12 +354,16 @@ export class Dataset {
 export class Path {
   d: Array<string>;
 
-  constructor(start: Point) {
-    this.d = new Array('M' + start.x + ' ' + start.y);
+  constructor() {
+    this.d = [];
   }
 
   add(p: Point) {
-    this.d.push('L' + p.x + ' ' + p.y);
+    if (this.d.length <= 0) {
+      this.d.push('M' + p.x + ' ' + p.y);
+    } else {
+      this.d.push('L' + p.x + ' ' + p.y);
+    }
   }
 
   toString(): string {

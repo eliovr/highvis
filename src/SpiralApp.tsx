@@ -229,7 +229,8 @@ class DataPoint extends React.Component<DataPointProps, {}> {
     let center = new Point(origin.x, origin.y + 10);
     let other = new Point(center.x + 10, center.y);
 
-    let path = new Path(center);
+    let path = new Path();
+    path.add(center);
     let stroke = label >= 0 && colorLabel ? 
       _colors[label] : 
       _colors[0];
